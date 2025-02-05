@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dengue Breeding Site Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            background-color: #f0f8ff;
+        }
+        #map {
+            height: 80vh;
+            width: 90%;
+            margin: 20px auto;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+        .button-container {
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #ff5733;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #c70039;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dengue Breeding Site Map</h1>
+    <p>Mark and confirm dengue breeding sites for public awareness.</p>
+    <div id="map"></div>
+    <div class="button-container">
+        <button id="confirm-btn" style="display:none;">Confirm Dengue Mosquito Breeding Site</button>
+        <button id="edit-btn">Edit My Reports</button>
+    </div>
+    
+    <script>
+        var map = L.map('map').setView([9.6615, 80.0255], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var selectedMarker;
+        var reportedLocations = [];
+        localStorage.setItem("reportedLocations", JSON.stringify(reportedLocations)); // Clear stored locations
+
+        function loadReportedLocations() {
+            reportedLocations.forEach((loc, index) => {
+                let marker = L.marker([loc.lat, loc.lng], { draggable: true }).addTo(map);
+                marker.options.index = index;
+                marker.on('click', function() {
+                    if (confirm("Do you want to delete or relocate this marker?")) {
+                        if (confirm("Click OK to relocate, Cancel to delete.")) {
+                            marker.dragging.enable();
+                            marker.on('dragend', function() {
+                                let index = marker.options.index;
+                                reportedLocations[index] = marker.getLatLng();
+                                localStorage.setItem("reportedLocations", JSON.stringify(reportedLocations));
+                                marker.dragging.disable();
+                            });
+                        } else {
+                            let index = marker.options.index;
+                            reportedLocations.splice(index, 1);
+                            localStorage.setItem("reportedLocations", JSON.stringify(reportedLocations));
+                            map.removeLayer(marker);
+                        }
+                    }
+                });
+            });
+        }
+
+        map.on('click', function(e) {
+            if (selectedMarker) {
+                map.removeLayer(selectedMarker);
+            }
+            selectedMarker = L.marker(e.latlng, { draggable: true }).addTo(map);
+            document.getElementById("confirm-btn").style.display = "block";
+        });
+
+        document.getElementById("confirm-btn").addEventListener("click", function() {
+            if (selectedMarker) {
+                var latLng = selectedMarker.getLatLng();
+                reportedLocations.push({ lat: latLng.lat, lng: latLng.lng });
+                localStorage.setItem("reportedLocations", JSON.stringify(reportedLocations));
+                selectedMarker = null;
+                document.getElementById("confirm-btn").style.display = "none";
+                loadReportedLocations();
+            }
+        });
+
+        document.getElementById("edit-btn").addEventListener("click", function() {
+            alert("Click on a marker to edit or delete it.");
+            loadReportedLocations();
+        });
+    </script>
+</body>
+</html>
